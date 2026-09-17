@@ -1,0 +1,36 @@
+Nicolas:
+	- 3D-Modell review
+	- PCB design
+	- Schaltplan design
+	- Automatische Unfallerkennung
+		- Sensor Montage (6 Sensoren)
+		- Programmierung
+			- GPS-Daten abgreifen
+			- Luftdrucksensoren abfragen und Daten interpretieren
+			- SIM-Karten Modul programmieren + SMS absenden
+	- Totwinkel Assistent
+		- Sensor Montage (2 Sensoren)
+		- Totwinkel ausmessen (2 Personen Arbeit)
+		- Programmierung
+			- Ultraschallsensor Daten abfragen und interpretieren
+			- Blinker Auslesen (hintere Blinker Leuchten)
+			- Warnlichter programmieren (A-Säulen)
+			- Akustisches Warnsignal programmieren (Lautsprecher links/rechts)
+Manuel:
+	- 3D-Modellieren (Display Halterung / Sensorhalterung in der Autokarosserie)
+	- PCB review
+	- Schaltplan review
+	- Parksensoren
+		- Sensor Montage (6 Sensoren)
+		- Programmierung
+			- Display programmieren
+			- Akustisches Warnsignal programmieren (4 Lautsprecher vorne/hinten; links/rechts)
+			- Ultraschallsensordaten abfragen und interpretieren	
+			- Vorwärtsfahren = vordere Sensoren ein / Rückwärtsfahren = alle Sensoren ein (Rücklichter auslesen)
+
+Gemeinsame Arbeit:
+	- Sensoren Montage
+	- Totwinkel Ausmessung
+	- Parksensoren nähe ausmessen
+	- PCB gesamt
+	- Schaltplan gesamt
