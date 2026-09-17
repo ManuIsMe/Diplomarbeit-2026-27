@@ -1,0 +1,26 @@
+Meilenstein 1 (5.11.2026):
+- Bauteile gekauft und besessen
+
+- Schaltpläne und PCBs fertig / (Nicolas)
+- 3D-Modelle review fertig / (Nicolas)
+- Automatische Unfallerkennung: GPS Daten bekommen und SMS schicken können / (Nicolas)
+
+- 3D-Modelle fertig und zumindest Probedruck gemacht / (Manuel) 
+- Schaltpläne und PCB review fertig / (Manuel)
+- Parksensoren: Sensoren auslesen und die korrespondierende Lautsprecher ertönen lassen / Anzeige auf Display projizieren / (Manuel)
+
+Meilenstein 2 (7.1.2027):
+- Automatische Unfallerkennung: fertig programmiert und Einbau der Sensoren zumindest Angefangen / (Nicolas)
+- Totwinkelassisten: Sensoren auslesen und die korrespondierende Lautsprecher ertönen lassen  und Warnlichtern ein-/ ausschalten / (Nicolas)
+
+- Parksensoren: Rücklichter auslesen für Sensor auswahl / Display programmierung komplett fertig / Einbau der Sensoren angefangen / (Manuel)
+- Fertiger 3D-Druck der Halterungen / (Manuel)
+
+Meilenstein 3 (18.2.2027):
+- Fertige Parksensoren
+- Fertiger Totwinkelassistent
+- Fertige Unfallerkennung
+- Alle Sensoren Montiert
+
+
+
