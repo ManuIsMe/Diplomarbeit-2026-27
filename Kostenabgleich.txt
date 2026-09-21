@@ -3,3 +3,4 @@ Manuel:
 - Microcontroller + Kabel 87,66€
 
 Nicolas:
+- Ultraschallsensoren 65,47€
