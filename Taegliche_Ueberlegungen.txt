@@ -1,2 +1,3 @@
 24.9.2026
-- Magnetmountings in den Arduino Halterungen und dem Full Housing
+- Magnetmountings in den Arduino Halterungen und dem Full Housing (Magnet größe: 5mm Durchmesser 1mm dicke)
+- Display Größe und welche Ansteuerung (zwischen 3 und 3,5 Zoll und mit SPI)
