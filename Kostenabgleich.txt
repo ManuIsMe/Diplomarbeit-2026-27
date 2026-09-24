@@ -1,6 +1,7 @@
 Manuel:
 - VW Golf, 300€ (Beglichen)
 - Microcontroller + Kabel 87,66€
+- Magnete 9,52€
 
 Nicolas:
 - Ultraschallsensoren 68,32€
