@@ -22,5 +22,7 @@ Meilenstein 3 (18.2.2027):
 - Fertige Unfallerkennung
 - Alle Sensoren Montiert
 
+Abgabe (6.4.2027)
+
 
 
