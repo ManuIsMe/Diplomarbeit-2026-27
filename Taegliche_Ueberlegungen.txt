@@ -1,0 +1,2 @@
+24.9.2026
+- Magnetmountings in den Arduino Halterungen und dem Full Housing
