@@ -1,3 +1,9 @@
 24.9.2026
 - Magnetmountings in den Arduino Halterungen und dem Full Housing (Magnet größe: 5mm Durchmesser 1mm dicke)
 - Display Größe und welche Ansteuerung (zwischen 3 und 3,5 Zoll und mit SPI)
+
+30.9.2026
+- Mögliche extra Absicherung der automatischen Unfall Erkennung mittels Beschleunigungssensor
+
+8.10.2026
+- Für die Front des Autos keinen Luftdrucksensor verwenden, sondern für die Front nur Beschleunigungssensor
