@@ -5,5 +5,4 @@ Manuel:
 
 Nicolas:
 - Ultraschallsensoren 68,32€
-- Bildschirm 26,11€
 - Simkartenmodul 13,00€
