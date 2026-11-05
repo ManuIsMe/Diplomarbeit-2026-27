@@ -34,6 +34,9 @@
   Speaker Pins:
     Left speaker -> 3
     Right speaker -> 6
+
+  Rear Light Pins:
+    Rear Light -> 12
 */
 
 // Pins for front center sensor
@@ -54,6 +57,9 @@
 // Pins for rear right sensor
 #define TRIG_PIN6 5
 #define ECHO_PIN6 7
+
+// Pin for rear light 
+#define Rear_Light_Pin 12
 
 // Beepstates
 enum BeepState {
@@ -135,6 +141,9 @@ void setup() {
   pinMode(SPEAKER_PIN_LEFT, OUTPUT);
   pinMode(SPEAKER_PIN_RIGHT, OUTPUT);
 
+  // Rear light Pin:
+  pinMode(Rear_Light_Pin, INPUT);
+
   // Timer1 configuration
   noInterrupts();
 
@@ -157,9 +166,11 @@ void loop() {
   Front_Left();
   Front_Right();
 
-  Rear_Center();
-  Rear_Left();
-  Rear_Right();
+  if (digitalRead(Rear_Light_Pin)){
+    Rear_Center();
+    Rear_Left();
+    Rear_Right();
+  }
 
   updateSpeakers();
 }
