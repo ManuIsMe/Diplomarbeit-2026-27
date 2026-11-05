@@ -1,0 +1,149 @@
+(kicad_sch
+	(version 20260306)
+	(generator "eeschema")
+	(generator_version "10.0")
+	(uuid "fcf223a2-ccc4-4e32-9583-450c8a89f963")
+	(paper "A4")
+	(lib_symbols)
+	(sheet
+		(at 151.13 19.05)
+		(size 127 81.28)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(fill
+			(color 0 0 0 0)
+		)
+		(uuid "188103a7-7aa9-41e8-ba98-afd4a2d9b4da")
+		(property "Sheetname" "Totwinkel"
+			(at 197.612 108.204 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 5.08 5.08)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "Totwinkel.kicad_sch"
+			(at 151.13 100.9146 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(instances
+			(project "Main_PCB"
+				(path "/fcf223a2-ccc4-4e32-9583-450c8a89f963"
+					(page "3")
+				)
+			)
+		)
+	)
+	(sheet
+		(at 19.05 111.76)
+		(size 127 73.66)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(fill
+			(color 0 0 0 0)
+		)
+		(uuid "3bdeb591-1978-4b23-ad89-70cba33bedbb")
+		(property "Sheetname" "Unfallerkennung"
+			(at 51.054 193.294 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 5.08 5.08)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "Unfallerkennung.kicad_sch"
+			(at 19.05 186.0046 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(instances
+			(project "Main_PCB"
+				(path "/fcf223a2-ccc4-4e32-9583-450c8a89f963"
+					(page "4")
+				)
+			)
+		)
+	)
+	(sheet
+		(at 19.05 19.05)
+		(size 127 81.28)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(fill
+			(color 0 0 0 0)
+		)
+		(uuid "c1dc8b47-a7ab-48c0-ae4d-81e2d4f8e62a")
+		(property "Sheetname" "Parktronik"
+			(at 61.722 108.458 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 5.08 5.08)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "untitled.kicad_sch"
+			(at 19.05 100.9146 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(instances
+			(project "Main_PCB"
+				(path "/fcf223a2-ccc4-4e32-9583-450c8a89f963"
+					(page "2")
+				)
+			)
+		)
+	)
+	(sheet_instances
+		(path "/"
+			(page "1")
+		)
+	)
+	(embedded_fonts no)
+)

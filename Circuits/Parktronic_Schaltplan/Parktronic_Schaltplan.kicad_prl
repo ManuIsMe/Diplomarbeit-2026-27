@@ -49,9 +49,7 @@
       "drc_exclusions",
       "locked_item_shadows",
       "conflict_shadows",
-      "shapes",
-      "board_outline_area",
-      "ly_points"
+      "shapes"
     ],
     "visible_layers": "ffffffff_ffffffff_ffffffff_ffffffff",
     "zone_display_mode": 0
@@ -94,12 +92,12 @@
     "col_widths": [
       186,
       171,
+      118,
+      99,
       112,
-      87,
+      140,
       112,
-      122,
-      112,
-      91,
+      105,
       112,
       112
     ],
