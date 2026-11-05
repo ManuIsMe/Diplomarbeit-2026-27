@@ -1,4 +1,5 @@
 #include "Draw_Screen.h"
+#include <avr/interrupt.h>
 /*
   Sensor Pins:
     Front Center:
@@ -11,13 +12,13 @@
       Trigger -> A4
       Echo -> A5
 
-    Back Center:
+    Rear Center:
       Trigger -> 0
       Echo -> 1
-    Back Left:
+    Rear Left:
       Trigger -> 2
       Echo -> 4
-    Back Right:
+    Rear Right:
       Trigger -> 5
       Echo -> 7
 
@@ -44,45 +45,67 @@
 // Pins for front right sensor
 #define TRIG_PIN3 A4
 #define ECHO_PIN3 A5
-// Pins for back center sensor
+// Pins for rear center sensor
 #define TRIG_PIN4 0
 #define ECHO_PIN4 1
-// Pins for back left sensor
+// Pins for rear left sensor
 #define TRIG_PIN5 2
 #define ECHO_PIN5 4
-// Pins for back right sensor
+// Pins for rear right sensor
 #define TRIG_PIN6 5
 #define ECHO_PIN6 7
+
+// Beepstates
+enum BeepState {
+  NO_Object = 1, Object_FAR = 2, Object_NEAR = 3, Object_VERY_NEAR = 4
+};
 
 //Pins and variables  speaker
 #define SPEAKER_PIN_LEFT 3
 #define SPEAKER_PIN_RIGHT 6
-int frequency = 500;
 unsigned long lastBeep_right = 0;
 unsigned long lastBeep_left = 0;
+unsigned long beepStart_right = 0;
+unsigned long beepStart_left = 0;
+uint8_t lastBeepState_right = NO_Object;
+uint8_t lastBeepState_left = NO_Object;
 bool beepActive_right = false;
 bool beepActive_left = false;
-const unsigned long BEEP_DURATION = 50;
+const uint8_t BEEP_DURATION = 50;
+volatile bool speakerTone_right = false;
+volatile bool speakerTone_left = false;
 
-// All sensor states initialized with No_Object
+// Remaining beep duration in milliseconds
+volatile uint8_t speakerTicks_right = 0;
+volatile uint8_t speakerTicks_left = 0;
+
+// All sensor states initialized with NO_OBJECT
 int Front_Center_State = 0;  
 int Front_Left_State = 0;
 int Front_Right_State = 0;
-int Back_Center_State = 0;
-int Back_Left_State = 0;
-int Back_Right_State = 0;
+int Rear_Center_State = 0;
+int Rear_Left_State = 0;
+int Rear_Right_State = 0;
 
-// All Last... states are set to a not defined state at initialization
-int Last_Front_Center_State = 5; 
-int Last_Front_Left_State = 5; 
-int Last_Front_Right_State = 5; 
-int Last_Back_Center_State = 5; 
-int Last_Back_Left_State = 5; 
-int Last_Back_Right_State = 5; 
+// All Last... states are initialized with NO_OBJECT
+int Last_Front_Center_State = 0; 
+int Last_Front_Left_State = 0; 
+int Last_Front_Right_State = 0; 
+int Last_Rear_Center_State = 0; 
+int Last_Rear_Left_State = 0; 
+int Last_Rear_Right_State = 0; 
+
+// Variables for distance
+// All distances initialized with 999 (NO_OBJECT)
+float distance_rear_center = 999;
+float distance_rear_left = 999;
+float distance_rear_right = 999;
+
+float distance_front_center = 999;
+float distance_front_left = 999;
+float distance_front_right = 999;
 
 void setup() {
-  //Serial.begin(9600);
-
   // Start Display:
   initScreen();
   drawScreen();
@@ -107,10 +130,41 @@ void setup() {
   digitalWrite(TRIG_PIN4, LOW);
   digitalWrite(TRIG_PIN5, LOW);
   digitalWrite(TRIG_PIN6, LOW);
+
+ // Speaker pins
+  pinMode(SPEAKER_PIN_LEFT, OUTPUT);
+  pinMode(SPEAKER_PIN_RIGHT, OUTPUT);
+
+  // Timer1 configuration
+  noInterrupts();
+
+  TCCR1A = 0;
+  TCCR1B = 0;
+  TCNT1 = 0;
+
+  // 1000 interrupts per second
+  OCR1A = 1999;
+
+  TCCR1B |= (1 << WGM12);  // CTC mode
+  TCCR1B |= (1 << CS11);   // Prescaler 8
+  TIMSK1 |= (1 << OCIE1A); // Enable Timer1 interrupt
+
+  interrupts();
+}
+
+void loop() {
+  Front_Center();
+  Front_Left();
+  Front_Right();
+
+  Rear_Center();
+  Rear_Left();
+  Rear_Right();
+
+  updateSpeakers();
 }
 
 // Functions for all sensors
-
 void Front_Center(){
   // Trigger-Puls
   digitalWrite(TRIG_PIN1, LOW);
@@ -127,11 +181,7 @@ void Front_Center(){
     float distance = time * 0.0343 / 2.0;
 
     if (distance <= 35){      
-      Serial.print("Entfernung: ");
-      Serial.print(distance);
-      Serial.println(" cm");
-      updateBeep_left(distance, frequency);
-      updateBeep_right(distance, frequency);
+      distance_front_center = distance;
       Front_Center_State = 3;
 
       // Update Front Center Display State
@@ -140,11 +190,7 @@ void Front_Center(){
         Last_Front_Center_State = 3; 
       }
     } else if (distance > 35 && distance <= 55){
-      Serial.print("Entfernung: ");
-      Serial.print(distance);
-      Serial.println(" cm");
-      updateBeep_left(distance, frequency);
-      updateBeep_right(distance, frequency);
+      distance_front_center = distance;
       Front_Center_State = 2;
 
       // Update Front Center Display State
@@ -153,11 +199,7 @@ void Front_Center(){
         Last_Front_Center_State = 2; 
       }
     } else if (distance > 55 && distance <= 100){
-      Serial.print("Entfernung: ");
-      Serial.print(distance);
-      Serial.println(" cm");
-      updateBeep_left(distance, frequency);
-      updateBeep_right(distance, frequency);
+      distance_front_center = distance;
       Front_Center_State = 1;
 
       // Update Front Center Display State
@@ -166,18 +208,23 @@ void Front_Center(){
         Last_Front_Center_State = 1; 
       }
     } else{
-      Serial.print("Entfernung: ");
-      Serial.print(distance);
-      Serial.println(" cm");
-      noTone(SPEAKER_PIN_LEFT);
-      noTone(SPEAKER_PIN_RIGHT);
       Front_Center_State = 0;
+      distance_front_center = 999;
 
       // Update Front Center Display State
       if (Last_Front_Center_State != Front_Center_State){
         updateSensor(FRONT_CENTER, NO_OBJECT);
         Last_Front_Center_State = 0; 
       }
+    }
+  }
+  else {
+    distance_front_center = 999;
+    Front_Center_State = 0;
+
+    if (Last_Front_Center_State != Front_Center_State) {
+      updateSensor(FRONT_CENTER, NO_OBJECT);
+      Last_Front_Center_State = 0;
     }
   }
 }
@@ -197,10 +244,7 @@ void Front_Left(){
     float distance = time * 0.0343 / 2.0;
 
     if (distance <= 35){      
-      Serial.print("Entfernung: ");
-      Serial.print(distance);
-      Serial.println(" cm");
-      updateBeep_left(distance, frequency);
+      distance_front_left = distance;
       Front_Left_State = 3;
 
       // Update Front left Display State
@@ -209,10 +253,7 @@ void Front_Left(){
         Last_Front_Left_State = 3; 
       }
     } else if (distance > 35 && distance <= 55){
-      Serial.print("Entfernung: ");
-      Serial.print(distance);
-      Serial.println(" cm");
-      updateBeep_left(distance, frequency);
+      distance_front_left = distance;
       Front_Left_State = 2;
 
       // Update Front left Display State
@@ -221,10 +262,7 @@ void Front_Left(){
         Last_Front_Left_State = 2; 
       }
     } else if (distance > 55 && distance <= 100){
-      Serial.print("Entfernung: ");
-      Serial.print(distance);
-      Serial.println(" cm");
-      updateBeep_left(distance, frequency);
+      distance_front_left = distance;
       Front_Left_State = 1;
 
       // Update Front left Display State
@@ -233,17 +271,23 @@ void Front_Left(){
         Last_Front_Left_State = 1; 
       }
     } else{
-      Serial.print("Entfernung: ");
-      Serial.print(distance);
-      Serial.println(" cm");
-      noTone(SPEAKER_PIN_LEFT);
       Front_Left_State = 0;
+      distance_front_left = 999;
 
       // Update Front left Display State
       if (Last_Front_Left_State != Front_Left_State){
         updateSensor(FRONT_LEFT, NO_OBJECT);
         Last_Front_Left_State = 0; 
       }
+    }
+  }
+  else {
+    distance_front_left = 999;
+    Front_Left_State = 0;
+
+    if (Last_Front_Left_State != Front_Left_State) {
+      updateSensor(FRONT_LEFT, NO_OBJECT);
+      Last_Front_Left_State = 0;
     }
   }
 }
@@ -262,11 +306,8 @@ void Front_Right(){
   if (time > 0){
     float distance = time * 0.0343 / 2.0;
 
-    if (distance <= 35){      
-      Serial.print("Entfernung: ");
-      Serial.print(distance);
-      Serial.println(" cm");
-      updateBeep_right(distance, frequency);
+    if (distance <= 35){
+      distance_front_right = distance;
       Front_Right_State = 3;
 
       // Update Front right Display State
@@ -275,10 +316,7 @@ void Front_Right(){
         Last_Front_Right_State = 3; 
       }
     } else if (distance > 35 && distance <= 55){
-      Serial.print("Entfernung: ");
-      Serial.print(distance);
-      Serial.println(" cm");
-      updateBeep_right(distance, frequency);
+      distance_front_right = distance;
       Front_Right_State = 2;
 
       // Update Front right Display State
@@ -287,10 +325,7 @@ void Front_Right(){
         Last_Front_Right_State = 2; 
       }
     } else if (distance > 55 && distance <= 100){
-      Serial.print("Entfernung: ");
-      Serial.print(distance);
-      Serial.println(" cm");
-      updateBeep_right(distance, frequency);
+      distance_front_right = distance;
       Front_Right_State = 1;
 
       // Update Front right Display State
@@ -299,11 +334,8 @@ void Front_Right(){
         Last_Front_Right_State = 1; 
       }
     } else{
-      Serial.print("Entfernung: ");
-      Serial.print(distance);
-      Serial.println(" cm");
-      noTone(SPEAKER_PIN_RIGHT);
       Front_Right_State = 0;
+      distance_front_right = 999;
 
       // Update Front right Display State
       if (Last_Front_Right_State != Front_Right_State){
@@ -312,9 +344,18 @@ void Front_Right(){
       }
     }
   }
+  else {
+    distance_front_right = 999;
+    Front_Right_State = 0;
+
+    if (Last_Front_Right_State != Front_Right_State) {
+      updateSensor(FRONT_RIGHT, NO_OBJECT);
+      Last_Front_Right_State = 0;
+    }
+  }
 }
 
-void Back_Center(){
+void Rear_Center(){
   // Trigger-Puls
   digitalWrite(TRIG_PIN4, LOW);
   delayMicroseconds(5);
@@ -329,62 +370,55 @@ void Back_Center(){
   if (time > 0){
     float distance = time * 0.0343 / 2.0;
 
-    if (distance <= 35){      
-      Serial.print("Entfernung: ");
-      Serial.print(distance);
-      Serial.println(" cm");
-      updateBeep_left(distance, frequency);
-      updateBeep_right(distance, frequency);
-      Back_Center_State = 3;
+    if (distance <= 35){
+      distance_rear_center = distance;
+      Rear_Center_State = 3;
 
-      // Update Back center Display State
-      if (Last_Back_Center_State != Back_Center_State){
+      // Update Rear center Display State
+      if (Last_Rear_Center_State != Rear_Center_State){
         updateSensor(REAR_CENTER, OBJECT_VERY_NEAR);
-        Last_Back_Center_State = 3; 
+        Last_Rear_Center_State = 3; 
       }
     } else if (distance > 35 && distance <= 55){
-      Serial.print("Entfernung: ");
-      Serial.print(distance);
-      Serial.println(" cm");
-      updateBeep_left(distance, frequency);
-      updateBeep_right(distance, frequency);
-      Back_Center_State = 2;
+      distance_rear_center = distance;
+      Rear_Center_State = 2;
 
-      // Update Back center Display State
-      if (Last_Back_Center_State != Back_Center_State){
+      // Update Rear center Display State
+      if (Last_Rear_Center_State != Rear_Center_State){
         updateSensor(REAR_CENTER, OBJECT_NEAR);
-        Last_Back_Center_State = 2; 
+        Last_Rear_Center_State = 2; 
       }
     } else if (distance > 55 && distance <= 100){
-      Serial.print("Entfernung: ");
-      Serial.print(distance);
-      Serial.println(" cm");
-      updateBeep_left(distance, frequency);
-      updateBeep_right(distance, frequency);
-      Back_Center_State = 1;
+      distance_rear_center = distance;
+      Rear_Center_State = 1;
 
-      // Update Back center Display State
-      if (Last_Back_Center_State != Back_Center_State){
+      // Update Rear center Display State
+      if (Last_Rear_Center_State != Rear_Center_State){
         updateSensor(REAR_CENTER, OBJECT_FAR);
-        Last_Back_Center_State = 1; 
+        Last_Rear_Center_State = 1; 
       }
     } else{
-      Serial.print("Entfernung: ");
-      Serial.print(distance);
-      Serial.println(" cm");
-      noTone(SPEAKER_PIN_LEFT);
-      noTone(SPEAKER_PIN_RIGHT);
-      Back_Center_State = 0;
+      Rear_Center_State = 0;
+      distance_rear_center = 999;
 
-      // Update Back center Display State
-      if (Last_Back_Center_State != Back_Center_State){
+      // Update Rear center Display State
+      if (Last_Rear_Center_State != Rear_Center_State){
         updateSensor(REAR_CENTER, NO_OBJECT);
-        Last_Back_Center_State = 0; 
+        Last_Rear_Center_State = 0; 
       }
     }
   }
+  else {
+    distance_rear_center = 999;
+    Rear_Center_State = 0;
+
+    if (Last_Rear_Center_State != Rear_Center_State) {
+      updateSensor(REAR_CENTER, NO_OBJECT);
+      Last_Rear_Center_State = 0;
+    }
+  }
 }
-void Back_Left(){
+void Rear_Left(){
   // Trigger-Puls
   digitalWrite(TRIG_PIN5, LOW);
   delayMicroseconds(5);
@@ -399,58 +433,55 @@ void Back_Left(){
   if (time > 0){
     float distance = time * 0.0343 / 2.0;
 
-    if (distance <= 35){      
-      Serial.print("Entfernung: ");
-      Serial.print(distance);
-      Serial.println(" cm");
-      updateBeep_left(distance, frequency);
-      Back_Left_State = 3;
+    if (distance <= 35){
+      distance_rear_left = distance;
+      Rear_Left_State = 3;
 
-      // Update Back left Display State
-      if (Last_Back_Left_State != Back_Left_State){
+      // Update Rear left Display State
+      if (Last_Rear_Left_State != Rear_Left_State){
         updateSensor(REAR_LEFT, OBJECT_VERY_NEAR);
-        Last_Back_Left_State = 3; 
+        Last_Rear_Left_State = 3; 
       }
     } else if (distance > 35 && distance <= 55){
-      Serial.print("Entfernung: ");
-      Serial.print(distance);
-      Serial.println(" cm");
-      updateBeep_left(distance, frequency);
-      Back_Left_State = 2;
+      distance_rear_left = distance;
+      Rear_Left_State = 2;
 
-      // Update Back left Display State
-      if (Last_Back_Left_State != Back_Left_State){
+      // Update Rear left Display State
+      if (Last_Rear_Left_State != Rear_Left_State){
         updateSensor(REAR_LEFT, OBJECT_NEAR);
-        Last_Back_Left_State = 2; 
+        Last_Rear_Left_State = 2; 
       }
     } else if (distance > 55 && distance <= 100){
-      Serial.print("Entfernung: ");
-      Serial.print(distance);
-      Serial.println(" cm");
-      updateBeep_left(distance, frequency);
-      Back_Left_State = 1;
+      distance_rear_left = distance;
+      Rear_Left_State = 1;
 
-      // Update Back left Display State
-      if (Last_Back_Left_State != Back_Left_State){
+      // Update Rear left Display State
+      if (Last_Rear_Left_State != Rear_Left_State){
         updateSensor(REAR_LEFT, OBJECT_FAR);
-        Last_Back_Left_State = 1; 
+        Last_Rear_Left_State = 1; 
       }
     } else{
-      Serial.print("Entfernung: ");
-      Serial.print(distance);
-      Serial.println(" cm");
-      noTone(SPEAKER_PIN_LEFT);
-      Back_Left_State = 0;
+      Rear_Left_State = 0;
+      distance_rear_left = 999;
 
-      // Update Back left Display State
-      if (Last_Back_Left_State != Back_Left_State){
+      // Update Rear left Display State
+      if (Last_Rear_Left_State != Rear_Left_State){
         updateSensor(REAR_LEFT, NO_OBJECT);
-        Last_Back_Left_State = 0; 
+        Last_Rear_Left_State = 0; 
       }
     }
   }
+  else {
+    distance_rear_left = 999;
+    Rear_Left_State = 0;
+
+    if (Last_Rear_Left_State != Rear_Left_State) {
+      updateSensor(REAR_LEFT, NO_OBJECT);
+      Last_Rear_Left_State = 0;
+    }
+  }
 }
-void Back_Right(){
+void Rear_Right(){
   // Trigger-Puls
   digitalWrite(TRIG_PIN6, LOW);
   delayMicroseconds(5);
@@ -465,133 +496,243 @@ void Back_Right(){
   if (time > 0){
     float distance = time * 0.0343 / 2.0;
 
-    if (distance <= 35){      
-      Serial.print("Entfernung: ");
-      Serial.print(distance);
-      Serial.println(" cm");
-      updateBeep_right(distance, frequency);
-      Back_Right_State = 3;
+    if (distance <= 35){
+      distance_rear_right = distance;
+      Rear_Right_State = 3;
 
-      // Update Back right Display State
-      if (Last_Back_Right_State != Back_Right_State){
+      // Update Rear right Display State
+      if (Last_Rear_Right_State != Rear_Right_State){
         updateSensor(REAR_RIGHT, OBJECT_VERY_NEAR);
-        Last_Back_Right_State = 3; 
+        Last_Rear_Right_State = 3; 
       }
     } else if (distance > 35 && distance <= 55){
-      Serial.print("Entfernung: ");
-      Serial.print(distance);
-      Serial.println(" cm");
-      updateBeep_right(distance, frequency);
-      Back_Right_State = 2;
+      distance_rear_right = distance;
+      Rear_Right_State = 2;
 
-      // Update Back right Display State
-      if (Last_Back_Right_State != Back_Right_State){
+      // Update Rear right Display State
+      if (Last_Rear_Right_State != Rear_Right_State){
         updateSensor(REAR_RIGHT, OBJECT_NEAR);
-        Last_Back_Right_State = 2; 
+        Last_Rear_Right_State = 2; 
       }
     } else if (distance > 55 && distance <= 100){
-      Serial.print("Entfernung: ");
-      Serial.print(distance);
-      Serial.println(" cm");
-      updateBeep_right(distance, frequency);
-      Back_Right_State = 1;
+      distance_rear_right = distance;
+      Rear_Right_State = 1;
 
-      // Update Back right Display State
-      if (Last_Back_Right_State != Back_Right_State){
+      // Update Rear right Display State
+      if (Last_Rear_Right_State != Rear_Right_State){
         updateSensor(REAR_RIGHT, OBJECT_FAR);
-        Last_Back_Right_State = 1; 
+        Last_Rear_Right_State = 1; 
       }
     } else{
-      Serial.print("Entfernung: ");
-      Serial.print(distance);
-      Serial.println(" cm");
-      noTone(SPEAKER_PIN_LEFT);
-      Back_Right_State = 0;
+      Rear_Right_State = 0;
+      distance_rear_right = 999;
 
-      // Update Back right Display State
-      if (Last_Back_Right_State != Back_Right_State){
+      // Update Rear right Display State
+      if (Last_Rear_Right_State != Rear_Right_State){
         updateSensor(REAR_RIGHT, NO_OBJECT);
-        Last_Back_Right_State = 0; 
+        Last_Rear_Right_State = 0; 
       }
+    }
+  }
+  else {
+    distance_rear_right = 999;
+    Rear_Right_State = 0;
+
+    if (Last_Rear_Right_State != Rear_Right_State) {
+      updateSensor(REAR_RIGHT, NO_OBJECT);
+      Last_Rear_Right_State = 0;
     }
   }
 }
 
-void loop() {
-  Front_Center();
-  Front_Left();
-  Front_Right();
+// Method to find minimum distance
+float getMinimumDistance(float d1, float d2, float d3, float d4) {
+    float minDistance = d1;
 
-  Back_Center();
-  Back_Left();
-  Back_Right();
+    if (d2 < minDistance) minDistance = d2;
+    if (d3 < minDistance) minDistance = d3;
+    if (d4 < minDistance) minDistance = d4;
+
+    return minDistance;
 }
 
+// Method to return Beepstates
+uint8_t getBeepState(float distance) {
 
-void updateBeep_right(float distance_right, int frequency) {
+    if (distance <= 35) {
+        return Object_VERY_NEAR;
+    }
+    else if (distance <= 55) {
+        return Object_NEAR;
+    }
+    else if (distance <= 100) {
+        return Object_FAR;
+    }
+    else {
+        return NO_Object;
+    }
+}
+
+// Mehod to update speakers to beep
+void updateSpeakers() {
+    // Minimum distance for left speaker
+    float leftDistance = getMinimumDistance(
+        distance_front_left,
+        distance_rear_left,
+        distance_front_center,
+        distance_rear_center
+    );
+
+    // Minimum distance for right speaker
+    float rightDistance = getMinimumDistance(
+        distance_front_right,
+        distance_rear_right,
+        distance_front_center,
+        distance_rear_center
+    );
+
+    // Update left speaker
+    updateBeep_left(getBeepState(leftDistance));
+
+    // Update right speaker
+    updateBeep_right(getBeepState(rightDistance));
+}
+
+// Method to make right speaker beep
+void updateBeep_right(uint8_t BeepState) {
   unsigned long currentTime = millis();
   unsigned long beepInterval_right;
 
-  // Abstand -> Geschwindigkeit
-  if (distance_right <= 35) {
+  if (BeepState == Object_VERY_NEAR) {
     beepInterval_right = 150;
   }
-  else if (distance_right > 35 && distance_right <= 55) {
+  else if (BeepState == Object_NEAR) {
     beepInterval_right = 400;
   }
-  else if (distance_right > 55 && distance_right <= 100) {
+  else if (BeepState == Object_FAR) {
     beepInterval_right = 800;
   }
   else {
-    noTone(SPEAKER_PIN_RIGHT);
+    speakerTone_right = false;
+    speakerTicks_right = 0;
     beepActive_right = false;
+    lastBeepState_right = NO_Object;
     return;
   }
 
-  // Piepton starten
-  if (!beepActive_right && currentTime - lastBeep_right >= beepInterval_right) {
+  // Detect a change in distance category
+  if (BeepState != lastBeepState_right) {
+    lastBeepState_right = BeepState;
     lastBeep_right = currentTime;
-    tone(SPEAKER_PIN_RIGHT, frequency);
-    beepActive_right = true;
   }
 
-  // Piepton beenden
-  if (beepActive_right && currentTime - lastBeep_right >= BEEP_DURATION) {
-    noTone(SPEAKER_PIN_RIGHT);
+  // Update beep status after 50 ms
+  if (beepActive_right &&
+      currentTime - beepStart_right >= BEEP_DURATION) {
+
     beepActive_right = false;
+  }
+
+  // Start next beep
+  if (!beepActive_right &&
+      currentTime - lastBeep_right >= beepInterval_right) {
+
+    noInterrupts();
+    speakerTicks_right = BEEP_DURATION;
+    speakerTone_right = true;
+    interrupts();
+
+    beepStart_right = currentTime;
+    lastBeep_right = currentTime;
+    beepActive_right = true;
   }
 }
 
-void updateBeep_left(float distance_left, int frequency) {
+// Method to make left speaker beep
+void updateBeep_left(uint8_t BeepState) {
   unsigned long currentTime = millis();
   unsigned long beepInterval_left;
 
-  // Abstand -> Geschwindigkeit
-  if (distance_left <= 35) {
+  if (BeepState == Object_VERY_NEAR) {
     beepInterval_left = 150;
   }
-  else if (distance_left > 35 && distance_left <= 55) {
+  else if (BeepState == Object_NEAR) {
     beepInterval_left = 400;
   }
-  else if (distance_left > 55 && distance_left <= 100) {
+  else if (BeepState == Object_FAR) {
     beepInterval_left = 800;
   }
   else {
-    noTone(SPEAKER_PIN_LEFT);
+    speakerTone_left = false;
+    speakerTicks_left = 0;
     beepActive_left = false;
+    lastBeepState_left = NO_Object;
     return;
   }
 
-  // Piepton starten
-  if (!beepActive_left && currentTime - lastBeep_left >= beepInterval_left) {
+  // Detect a change in distance category
+  if (BeepState != lastBeepState_left) {
+    lastBeepState_left = BeepState;
     lastBeep_left = currentTime;
-    tone(SPEAKER_PIN_LEFT, frequency);
-    beepActive_left = true;
   }
 
-  // Piepton beenden
-  if (beepActive_left && currentTime - lastBeep_left >= BEEP_DURATION) {
-    noTone(SPEAKER_PIN_LEFT);
+  // Update beep status after 50 ms
+  if (beepActive_left &&
+      currentTime - beepStart_left >= BEEP_DURATION) {
+
     beepActive_left = false;
+  }
+
+  // Start next beep
+  if (!beepActive_left &&
+      currentTime - lastBeep_left >= beepInterval_left) {
+
+    noInterrupts();
+    speakerTicks_left = BEEP_DURATION;
+    speakerTone_left = true;
+    interrupts();
+
+    beepStart_left = currentTime;
+    lastBeep_left = currentTime;
+    beepActive_left = true;
+  }
+}
+
+// interrupt handler for simultanious beeps
+ISR(TIMER1_COMPA_vect) {
+  static bool phase = false;
+
+  // Count down beep duration (1 ms per interrupt)
+  if (speakerTicks_left > 0) {
+    speakerTicks_left--;
+
+    if (speakerTicks_left == 0) {
+      speakerTone_left = false;
+    }
+  }
+
+  if (speakerTicks_right > 0) {
+    speakerTicks_right--;
+
+    if (speakerTicks_right == 0) {
+      speakerTone_right = false;
+    }
+  }
+
+  // Generate 500 Hz square wave
+  phase = !phase;
+
+  // Left speaker
+  if (speakerTone_left && phase) {
+    PORTD |= (1 << PD3);
+  } else {
+    PORTD &= ~(1 << PD3);
+  }
+
+  // Right speaker
+  if (speakerTone_right && phase) {
+    PORTD |= (1 << PD6);
+  } else {
+    PORTD &= ~(1 << PD6);
   }
 }
